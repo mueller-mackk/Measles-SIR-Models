@@ -1,0 +1,318 @@
+Code (R version 4.5.2)
+
+---
+title: "6664Proj"
+output: html_document
+date: "2026-03-31"
+---
+
+## install packages
+```{r}
+library(dplyr)
+library(ggplot2)
+library(deSolve)
+library(tidyverse)
+```
+
+# EDA (initial exploratory analysis)
+```{r}
+# Example CDC data 
+measles_cases <- data.frame(
+  year = 2000:2026,
+  cases = c(
+    86, 116, 44, 56, 37, 66, 55, 43, 140, 71,
+    63, 220, 55, 187, 667, 188, 86, 120, 372, 1282,
+    13, 49, 121, 59, 285, 2284, 1575
+  ),
+  vax_rate = c(
+    0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95,
+    0.95, 0.95, 0.94, 0.94, 0.94, 0.94, 0.94, 0.94,
+    0.93, 0.93, 0.93, 0.93, 0.92, 0.92, 0.92, 0.92, 0.925, 0.925, 0.925
+  )) %>%
+  mutate(
+    incidence_per_100k = cases / 330000000 * 100000  # US population approx)
+
+## measles cases over time
+ggplot(measles_cases, aes(x = year, y = cases)) +
+  geom_line(color = "firebrick", size = 1.2) +
+  geom_point(color = "firebrick", size = 2) +
+  scale_x_continuous(
+    breaks = seq(2000, 2026, by = 5)  # label every 5 years) +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    title = "Measles Cases in the US (2000–2026)",
+    x = "Year",
+    y = "Number of Cases") +
+  theme_minimal(base_size = 14)
+
+## vaccination rates over time
+ggplot(measles_cases, aes(x = year, y = vax_rate)) +
+  geom_line(color = "steelblue", size = 1.2) +
+  geom_point(color = "steelblue", size = 2) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(
+    title = "Estimated MMR Vaccination Coverage in the US (2000–2026)",
+    x = "Year",
+    y = "Vaccination Coverage") +
+  theme_minimal(base_size = 14)
+```
+
+# SIR model
+```{r}
+sir_model <- function(time, state, parameters) {
+  
+  with(as.list(c(state, parameters)), {
+    
+    dS <- -beta * S * I / N
+    dI <- beta * S * I / N - gamma * I
+    dR <- gamma * I
+    
+    list(c(dS, dI, dR))})}
+
+### parameters
+
+gamma <- 1/7
+
+R0_values <- c(12, 18)
+
+vax_rates <- c(0.95, 0.90, 0.85, 0.80)
+
+N <- 1000000
+
+I0 <- 10
+
+VE <- 0.97
+
+R0_init <- 0
+
+time <- seq(0, 365, by = 1)
+
+results_list <- list()
+
+### Run scenarios
+
+for (r0 in R0_values) {
+  beta <- r0 * gamma
+  for (v in vax_rates) {
+    S0 <- N * (1 - v * VE) - I0
+    init <- c(
+      S = S0,
+      I = I0,
+      R = R0_init)
+    
+    parameters <- c(
+      beta = beta,
+      gamma = gamma,
+      N = N)
+    
+    out <- ode(
+      y = init,
+      times = time,
+      func = sir_model,
+      parms = parameters)
+    
+    df <- as.data.frame(out) %>%
+      mutate(
+        vaccination = v,
+        baseline_R0 = r0)
+    results_list[[paste(r0, v)]] <- df}}
+
+sir_results <- bind_rows(results_list)
+```
+
+```{r}
+df <- as.data.frame(out) %>%
+  mutate(
+    vaccination = v,
+    vaccination_label = paste0(v * 100, "%"),
+    baseline_R0 = r0)
+```
+
+# Plots
+```{r}
+sir_long <- sir_results %>%
+  pivot_longer(
+    cols = c(S, I, R),
+    names_to = "compartment",
+    values_to = "population") %>%
+  mutate(
+    vaccination_label = paste0(vaccination * 100, "%"),
+    baseline_label =
+      paste0("Baseline R0 = ", baseline_R0))
+```
+
+## SIR curves (all on same plot)
+```{r}
+ggplot(
+  sir_long,
+  aes(
+    x = time,
+    y = population,
+    color = compartment)) +
+  geom_line(size = 1) +
+  facet_grid(
+    baseline_label ~ vaccination_label) +
+  labs(
+    title = "SIR Model Dynamics Under Different Vaccination Rates",
+    x = "Days",
+    y = "Population Size",
+    color = "Compartment") +
+  theme_minimal(base_size = 14)
+```
+
+## Measles infection under different vaccination rates
+```{r}
+ggplot(sir_results,
+  aes(x = time,
+      y = I,
+    color = factor(vaccination))) +
+  geom_line(size = 1.2) +
+  facet_wrap(
+    ~ baseline_R0) +
+  labs(
+    title =
+      "Projected Measles Infections Under Different Vaccination Rates",
+    x = "Days",
+    y = "Number Infectious",
+    color = "Vaccination Rate") +
+  xlim = c(0, 250) +
+  theme_minimal(base_size = 14)
+```
+
+## herd immunity (gold standard visual)
+```{r}
+gold_standard <- sir_results %>%
+  filter(vaccination == 0.95)
+
+comparison_data <- sir_results %>%
+  filter(vaccination != 0.95)
+
+ggplot() +
+  geom_line(
+    data = gold_standard,
+    aes(
+      x = time,
+      y = I),
+    size = 1.5,
+    linetype = "solid") +
+  geom_line(
+    data = comparison_data,
+    aes(
+      x = time,
+      y = I,
+      color = factor(vaccination)),
+    size = 1) +
+  facet_wrap(
+    ~ baseline_R0) +
+  labs(
+    title =
+      "Comparison to Herd Immunity (95% Vaccination)",
+    x = "Days",
+    y = "Number Infectious",
+    color = "Vaccination Rate") +
+  theme_minimal(base_size = 14)
+```
+
+## summary statistics
+```{r}
+summary_table <- sir_results %>%
+  group_by(
+    vaccination,
+    baseline_R0) %>%
+  summarize(
+    peak_infections =
+      max(I),
+    time_to_peak =
+      time[which.max(I)],
+    total_infected =
+      max(R),
+    .groups = "drop")
+
+summary_table
+```
+
+## epidemic size!!
+infections that occur under each vaccination level
+```{r}
+ggplot(
+  summary_table,
+  aes(
+    x = factor(vaccination),
+    y = total_infected,
+    fill = factor(baseline_R0))) +
+  geom_bar(
+    stat = "identity",
+    position = "dodge") +
+  labs(
+    title =
+      "Total Epidemic Size Under Different Vaccination Rates",
+    x = "Vaccination Rate",
+    y = "Total Infected",
+    fill = "Baseline R0") +
+  theme_minimal(base_size = 14)
+```
+
+## infection comparison
+```{r}
+ggplot(
+  summary_table,
+  aes(
+    x = factor(vaccination),
+    y = peak_infections,
+    fill = factor(baseline_R0))) +
+  geom_bar(
+    stat = "identity",
+    position = "dodge") +
+  labs(
+    title =
+      "Peak Infection Levels by Vaccination Rate",
+    x = "Vaccination Rate",
+    y = "Peak Number Infectious",
+    fill = "Baseline R0") +
+  theme_minimal(base_size = 14)
+```
+
+## percent increase
+```{r}
+ggplot(
+  sir_results,
+  aes(
+    x = time,
+    y = I,
+    color = factor(vaccination))) +
+  geom_line(size = 1.2) +
+  facet_wrap(
+    ~ baseline_R0) +
+  labs(
+    title =
+      "Projected Measles Infections Under Different Vaccination Rates",
+    x = "Days",
+    y = "Number Infectious",
+    color = "Vaccination Rate") +
+  coord_cartesian(xlim = c(0, 250)) +
+  theme_minimal(base_size = 14)
+```
+
+### comparison table
+```{r}
+gold_standard <- summary_table %>%
+  filter(vaccination == 0.95)
+
+comparison_table <- summary_table %>%
+  
+  left_join(
+    gold_standard,
+    by = "baseline_R0",
+    suffix = c("", "_gold")) %>%
+  
+  mutate(
+    excess_peak =
+      peak_infections - peak_infections_gold,
+    excess_total =
+      total_infected - total_infected_gold,
+    percent_increase_total =
+      100 *
+      (total_infected - total_infected_gold) /
+      total_infected_gold)
+```
+
