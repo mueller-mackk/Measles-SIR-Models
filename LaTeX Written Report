@@ -1,0 +1,151 @@
+\documentclass[11pt]{article}
+\setcounter{secnumdepth}{0}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{setspace}
+\usepackage{amsmath}
+\usepackage[margin=1in]{geometry}
+
+\title{The Impact of Vaccination Coverage on Measles Transmission: An SIR Modeling Approach}
+\author{Mackenzie Mueller | Biostat 664 | Dr. Fan Bu}
+\date{April 2026}
+
+\begin{document}
+\maketitle
+\setstretch{1.5} 
+\thispagestyle{empty}  % optional: removes page number from title page
+\newpage
+\setcounter{page}{1}
+
+
+\section{Introduction}
+Measles, Mumps, and Rubella (MMR), more commonly known as Measles, is a highly contagious, vaccine-preventable infection characterized by a high fever, cough, and runny nose \cite{1}. It is spread through respiratory droplets and airborne particles. It’s important to understand how the spread of measles is modeled, especially if it will need to be modeled in the current day and age. It’s also important to understand how drastically a slight drop in vaccination rates can affect the infectious spread of measles. 
+
+Herd immunity is defined as protection from an infectious disease as a result of a large number of people being vaccinated against that disease \cite{3}. For measles, herd immunity is defined as 95\% of the population having 2 doses of the MMR vaccine. This amount of immunity would prevent measles outbreaks from happening. Currently, the US is experiencing a potential outbreak of measles due to lowered MMR vaccination rates, with only 92.5\% immunity reached in the last 5 years.
+
+Past mathematical models have included stochastic modeling of measles transmission, SEIR or SIR models, and differential equations. Models are generally used to measure vaccine status and rate, rates of infection and transmission, and rates of recovery. This project uses a SIR model to compare the spread of measles infections and potential outbreaks between different vaccination rates (80\%, 85\%, 90\%, 95\%) and baseline reproduction rates (12 or 18) using simulated US data. 
+
+\section{Methods}
+The data was simulated using information about measles from the Centers for Disease \& Control (CDC) \cite{1}. Recorded measles cases from the last 25 years were considered when simulating the data, along with past vaccination rates. Though the US population is around 330 million, our model was simulated using a population of 1 million individuals to approximate large-scale US population dynamics while maintaining computational feasibility. 
+
+A Susceptible-Infectious-Recovered (SIR) model was built for 2 strata of baseline reproduction rates (12 or 18) and 4 strata of vaccination rates within those (80\%, 85\%, 90\%, 95\%). SIR models are a class of models that predict the spread of a disease. The S (Susceptible), I (Infectious), and R (Recovered) represent the number of people susceptible to a disease, infected by a disease, and recovered from a disease. SIR models use ordinary differential equations (ODEs) to show how fast something changes at each moment in time. The core SIR ODEs are:
+
+$$
+\frac{dS}{dt} = -\beta \frac{SI}{N}, \quad
+\frac{dI}{dt} = \beta \frac{SI}{N} - \gamma I, \quad
+\frac{dR}{dt} = \gamma I
+$$
+
+where $\beta$ represents the transmission rate, $\gamma$ represents the recovery rate, $N$ represents the total population, and $S/N$ represents the probability of contacting a susceptible person. The key interpretation here is $\beta\frac{SI}{N}$, which is the number of new infections occurring at time $t$. 
+
+The S, I and R rates all need to be approximated in an SIR model. We used an infectious period of 7 days, giving a recovery rate of 0.14 based on World Health Organization (WHO) guidelines \cite{2}. WHO reports a baseline reproduction rate between 12-18, so to better understand how baseline reproduction affects the spread of measles, we used 12 as a low-end reproduction rate and compared it to 18 as a high-end reproduction rate.
+
+Vaccine effectiveness was incorporated into the model to more accurately reflect real-world protection conferred by MMR vaccine. Rather than assuming perfect immunity among vaccinated individuals, vaccine effectiveness was set to 97\%, consistent with estimates reported by public health agencies for two doses of the MMR vaccine. This adjustment accounts for the fact that a small proportion of vaccinated individuals may remain susceptible to infection. As a result, the initial susceptible population was defined as:
+
+\[
+S_0 = N (1 - v \times VE)
+\]
+
+where \(v\) represents vaccination coverage and \(VE = 0.97\) represents vaccine effectiveness. This formulation reduces the susceptible population proportionally to both vaccination coverage and imperfect vaccine protection, allowing the model to capture residual susceptibility even in highly vaccinated populations.
+
+\section{Results}
+Figures 1 and 2 show exploratory data analysis plots of measles cases and vaccination rates from the past 25 years. Figure 1 shows how cases spiked in 2025. Data from 2026 (though we are only 4 months in) is already creeping up to the cases reached in 2025. Figure 2 shows how vaccination rates have declined since 2000, with the last 5 years having vaccination rates of around 92.5% of the US population.
+
+Comparing SIR models showed that compared to the herd immunity benchmark of 95\% vaccination coverage, reductions in vaccination rates resulted in substantial increases in total infections. At a baseline reproduction rate of 12, reducing vaccination coverage from 95\% to 90\% increased the total number of infections from 162 to 75,963, representing an increase of approximately 46,860\%. Further reductions to 85\% and 80\% vaccination coverage resulted in even larger epidemic sizes, exceeding 144,000 and 204,000 infections, respectively. At a baseline reproduction rate of 18, the high end of our scale, reducing vaccination coverage from 95\% to 90\% increased the total number of infections from 40,926 to 109,218, representing an increase of approximately 167\%. Table 1 shows a comparison of epidemiologic outcomes based on different vaccination rates and baseline reproduction rates. The gold standard is a 95\% vaccination rate with 97\% effectiveness. 
+
+Figure 3 shows projected measles infections under different vaccination rates and baseline reproductive rates. The number of infections drastically increases with each 5\% reduction in vaccination rates, with almost no infections at the herd immunity level of 95\%. Figure 4 shows the SIR model dynamics for each of the 8 models run, where higher levels of vaccination show lower infection curves and less susceptible people. Figure 5 shows a barplot of the total number of infected people based on different vaccination rates and baseline reproduction rates. Herd immunity at a low baseline reproductive rate shows approximately 0 cases in a year.
+
+\section{Discussion}
+This project highlights how drastically vaccine rates can affect the spread and contagion of measles. In today’s day and age, the US sits at approximately 92\% immunity, and that vaccination rate has only been projected to go down based on decisions being made by the current administration. This takes us closer to a 90\% vaccination rate, which we saw based on these SIR models can lead to over 70,000 new cases each year. Because of how contagious measles is, 92\% of cases currently are passed by people who are not vaccinated. 
+
+By increasing the vaccination rates of MMR in the US, we have the opportunity to reach herd immunity again, something that we haven’t had since before 2010. Even an increase as small as 1\% could improve the spread of measles that we’ve been seeing recently. To conclude, SIR models provide us with a unique opportunity to assess how a disease affects a real population, and allow us to make mathematically-based decisions on how to avoid epidemics and outbreaks, such as the spread of measles.
+
+\section{Tables \& Figures}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\linewidth]{measles.cases.png}
+    \caption{\textbf{Measles Cases over Time} in the US from 2000-2026}
+    \label{fig:placeholder}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\linewidth]{mmr.coverage.png}
+    \caption{\textbf{Vaccination Rates over Time} in the US from 2000-2026}
+    \label{fig:placeholder}
+\end{figure}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{
+cc
+S[table-format=6.0]
+S[table-format=6.0]
+S[table-format=6.0]
+S[table-format=6.1]
+}
+\toprule
+Vaccination & {$R_0$} &
+{Total Infected} &
+{Gold Standard Total} &
+{Excess Infections} &
+{\% Increase} \\
+\midrule
+80\% & 12 & 204823 & 162 & 204661 & 126520.9 \\
+80\% & 18 & 219708 & 40926 & 178781 & 436.8 \\
+85\% & 12 & 144520 & 162 & 144358 & 89241.9 \\
+85\% & 18 & 166781 & 40926 & 125854 & 307.5 \\
+90\% & 12 & 75963 & 162 & 75801 & 46860.0 \\
+90\% & 18 & 109218 & 40926 & 68292 & 166.9 \\
+95\% & 12 & 162 & 162 & 0 & 0.0 \\
+95\% & 18 & 40926 & 40926 & 0 & 0.0 \\
+\bottomrule
+\end{tabular}
+\caption{\textbf{Comparison of Epidemic Outcomes Relative to Herd Immunity} (95\% Vaccination). Gold standard defined as 95\% vaccination coverage with vaccine effectiveness of 97\%. $R_0$ represents baseline reproduction, either 12 (low) or 18 (high). Vaccination rates being compared are 80\%, 85\%, 90\%, 95\%.}
+\end{table}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\linewidth]{infections.vs.vax.rates.png}
+    \caption{\textbf{Measles Infections under different Vaccination Rates} of 95\%, 90\%, 85\%, 80\% stratified by baseline reproduction rates of 12 (low) or 18 (high). Note 95\% represents herd immunity.}
+    \label{fig:placeholder}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\linewidth]{sir_models.png}
+    \caption{\textbf{Susceptible-Infectious-Recovered (SIR) Model Dynamics} under different Vaccination Rates of 95\%, 90\%, 85\%, 80\% stratified by baseline reproduction rates of 12 (low) or 18 (high). As vaccination coverage increases, peak infectious burden decreases substantially and outbreaks become smaller and slower. Under 95\% vaccination coverage, corresponding to the herd immunity threshold, transmission is largely suppressed.}
+    \label{fig:placeholder}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\linewidth]{epidemic.size.png}
+    \caption{\textbf{Total Epidemic Size under Different Vaccination Rates} of 95\%, 90\%, 85\%, 80\% stratified by baseline reproduction rates of 12 (low) or 18 (high).}
+    \label{fig:placeholder}
+\end{figure}
+
+\clearpage
+
+\begin{thebibliography}{9}
+
+\bibitem{1}
+Centers for Disease Control and Prevention. (2024). 
+\textit{Measles vaccination}. 
+Retrieved from https://www.cdc.gov/measles/vaccines/index.html
+
+\bibitem{2}
+World Health Organization. (2023). 
+\textit{Measles}. 
+Retrieved from https://www.who.int/
+
+\bibitem{3}
+National Cancer Institute. (n.d.). 
+\textit{Herd Immunity}. 
+Retrieved from https://www.cancer.gov/publications/dictionaries/cancer-terms/def/herd-immunity
+
+\end{thebibliography}
+
+\end{document}
